@@ -15,11 +15,11 @@ slackAuthToken=
 slackChannel=irc
 
 ircVerbose=true
-ircNick=ipsse-slack
-ircServer=irc.freenode.net
+ircNick=slackbot
+ircServer=irc.somenetwork.net
 ircPort=6667
 ircPassword=
-ircChannel=#ipsse
+ircChannel=#somechannel
 ```
 
 * `slackAuthToken`: See the Slack page about [Bot Users](https://api.slack.com/bot-users) to get know what to do in order to set up a new bot user for your Slack team (and what to do in order to get an auth token).
