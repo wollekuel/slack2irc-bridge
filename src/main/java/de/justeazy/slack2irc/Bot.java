@@ -19,7 +19,7 @@ public interface Bot extends Runnable {
 	 * @param message
 	 *            Message to send
 	 */
-	public void sendMessage(String message);
+	public void sendMessage(Message message);
 
 	/**
 	 * <p>
@@ -38,6 +38,6 @@ public interface Bot extends Runnable {
 	 * 
 	 * @return Last posted Message
 	 */
-	public String getPostedMessage();
+	public Message getPostedMessage();
 
 }

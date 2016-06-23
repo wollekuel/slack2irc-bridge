@@ -10,6 +10,9 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import de.justeazy.slack2irc.irc.IrcBot;
 import de.justeazy.slack2irc.slack.SlackBot;
 
@@ -27,24 +30,29 @@ import de.justeazy.slack2irc.slack.SlackBot;
 public class Slack2IrcBridge implements PropertyChangeListener {
 
 	/**
+	 * Logging instance
+	 */
+	private static Logger l = LogManager.getLogger(Slack2IrcBridge.class);
+
+	/**
 	 * Instance of the IRC bot
 	 */
-	Bot ircBot;
+	private Bot ircBot;
 
 	/**
 	 * Thread of the IRC bot
 	 */
-	Thread ircThread;
+	private Thread ircThread;
 
 	/**
 	 * Instance of the Slack bot
 	 */
-	Bot slackBot;
+	private Bot slackBot;
 
 	/**
 	 * Thread of the Slack bot
 	 */
-	Thread slackThread;
+	private Thread slackThread;
 
 	/**
 	 * <p>
@@ -108,13 +116,18 @@ public class Slack2IrcBridge implements PropertyChangeListener {
 	 * </p>
 	 */
 	public void propertyChange(PropertyChangeEvent evt) {
+		l.trace("evt.source.class = " + evt.getSource().getClass());
 		if (evt.getSource().equals(ircBot)) {
 			if (evt.getPropertyName().equals("postedMessage")) {
-				slackBot.sendMessage((String) evt.getNewValue());
+				l.trace("evt.newValue.username = " + ((Message) evt.getNewValue()).getUsername());
+				l.trace("evt.newValue.content = " + ((Message) evt.getNewValue()).getContent());
+				slackBot.sendMessage((Message) evt.getNewValue());
 			}
 		} else if (evt.getSource().equals(slackBot)) {
 			if (evt.getPropertyName().equals("postedMessage")) {
-				ircBot.sendMessage((String) evt.getNewValue());
+				l.trace("evt.newValue.username = " + ((Message) evt.getNewValue()).getUsername());
+				l.trace("evt.newValue.content = " + ((Message) evt.getNewValue()).getContent());
+				ircBot.sendMessage((Message) evt.getNewValue());
 			}
 		}
 	}

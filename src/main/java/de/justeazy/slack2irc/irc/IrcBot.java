@@ -10,6 +10,7 @@ import org.jibble.pircbot.NickAlreadyInUseException;
 import org.jibble.pircbot.PircBot;
 
 import de.justeazy.slack2irc.Bot;
+import de.justeazy.slack2irc.Message;
 
 /**
  * <p>
@@ -34,7 +35,7 @@ public class IrcBot extends PircBot implements Bot {
 	/**
 	 * Last posted message
 	 */
-	private String postedMessage = null;
+	private Message postedMessage = null;
 
 	/**
 	 * <p>
@@ -58,8 +59,8 @@ public class IrcBot extends PircBot implements Bot {
 	 * </p>
 	 */
 	public void onMessage(String channel, String sender, String login, String hostname, String message) {
-		String oldPostedMessage = postedMessage == null ? null : new String(postedMessage);
-		postedMessage = "<" + sender + "> " + message;
+		Message oldPostedMessage = postedMessage != null ? postedMessage.clone() : null;
+		postedMessage = new Message(sender, message);
 		pcs.firePropertyChange("postedMessage", oldPostedMessage, postedMessage);
 	}
 
@@ -68,7 +69,7 @@ public class IrcBot extends PircBot implements Bot {
 	 * Returns the last posted message.
 	 * </p>
 	 */
-	public String getPostedMessage() {
+	public Message getPostedMessage() {
 		return this.postedMessage;
 	}
 
@@ -77,8 +78,9 @@ public class IrcBot extends PircBot implements Bot {
 	 * Sends a message to the configured channel in the IRC network.
 	 * </p>
 	 */
-	public void sendMessage(String message) {
-		this.sendMessage(properties.getProperty("ircChannel"), message);
+	public void sendMessage(Message message) {
+		this.sendMessage(properties.getProperty("ircChannel"),
+				"<" + message.getUsername() + "> " + message.getContent());
 	}
 
 	/**
