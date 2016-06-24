@@ -10,6 +10,9 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import de.justeazy.slack2irc.irc.IrcBot;
 import de.justeazy.slack2irc.slack.SlackBot;
 
@@ -27,24 +30,29 @@ import de.justeazy.slack2irc.slack.SlackBot;
 public class Slack2IrcBridge implements PropertyChangeListener {
 
 	/**
+	 * Logging instance
+	 */
+	private static Logger l = LogManager.getLogger(Slack2IrcBridge.class);
+
+	/**
 	 * Instance of the IRC bot
 	 */
-	Bot ircBot;
+	private Bot ircBot;
 
 	/**
 	 * Thread of the IRC bot
 	 */
-	Thread ircThread;
+	private Thread ircThread;
 
 	/**
 	 * Instance of the Slack bot
 	 */
-	Bot slackBot;
+	private Bot slackBot;
 
 	/**
 	 * Thread of the Slack bot
 	 */
-	Thread slackThread;
+	private Thread slackThread;
 
 	/**
 	 * <p>
@@ -102,19 +110,66 @@ public class Slack2IrcBridge implements PropertyChangeListener {
 
 	/**
 	 * <p>
+	 * Does the processing of command events like <code>?listusers</code>.
+	 * </p>
+	 * 
+	 * @param evt
+	 *            Event
+	 */
+	private void processCommandEvent(PropertyChangeEvent evt) {
+		Message message = (Message) evt.getNewValue();
+		if (message.getContent().startsWith("?listusers")) {
+			l.trace("Processing /listusers command event");
+			processListusersCommandEvent(evt);
+		}
+	}
+
+	/**
+	 * <p>
+	 * Does the processing of the <code>?listusers</code> command.
+	 * </p>
+	 * 
+	 * @param evt
+	 *            Event
+	 */
+	private void processListusersCommandEvent(PropertyChangeEvent evt) {
+		if (evt.getSource().equals(ircBot)) {
+			String[] usernames = slackBot.getChannelUsers();
+			String msg = "Users in Slack: ";
+			for (String username : usernames) {
+				msg += username + ", ";
+			}
+			l.debug("msg.substring(0, msg.length() - 2) = " + msg.substring(0, msg.length() - 2));
+			ircBot.sendMessage(new Message(null, msg.substring(0, msg.length() - 2)));
+		} else if (evt.getSource().equals(slackBot)) {
+			String[] usernames = ircBot.getChannelUsers();
+			String msg = "Users in IRC: ";
+			for (String username : usernames) {
+				msg += username + ", ";
+			}
+			l.trace("msg.substring(0, msg.length() - 2) = " + msg.substring(0, msg.length() - 2));
+			slackBot.sendMessage(new Message(null, msg.substring(0, msg.length() - 2)));
+		}
+	}
+
+	/**
+	 * <p>
 	 * Implements <code>propertyChange()</code> of
 	 * <code>PropertyChangeListener</code> to react upon all new messages in
 	 * both networks.
 	 * </p>
 	 */
 	public void propertyChange(PropertyChangeEvent evt) {
-		if (evt.getSource().equals(ircBot)) {
-			if (evt.getPropertyName().equals("postedMessage")) {
-				slackBot.sendMessage((String) evt.getNewValue());
-			}
-		} else if (evt.getSource().equals(slackBot)) {
-			if (evt.getPropertyName().equals("postedMessage")) {
-				ircBot.sendMessage((String) evt.getNewValue());
+		l.trace("evt.source.class = " + evt.getSource().getClass());
+		if (evt.getPropertyName().equals("postedMessage")) {
+			Message message = (Message) evt.getNewValue();
+			if (message.getContent().startsWith("?")) {
+				l.trace("Processing command event");
+				processCommandEvent(evt);
+			} else if (evt.getSource().equals(ircBot)) {
+				slackBot.sendMessage((Message) evt.getNewValue());
+			} else if (evt.getSource().equals(slackBot)) {
+				ircBot.sendMessage((Message) evt.getNewValue());
 			}
 		}
 	}

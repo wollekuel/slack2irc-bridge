@@ -3,8 +3,14 @@ package de.justeazy.slack2irc.slack;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Properties;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.ullink.slack.simpleslackapi.SlackChannel;
 import com.ullink.slack.simpleslackapi.SlackSession;
 import com.ullink.slack.simpleslackapi.SlackUser;
 import com.ullink.slack.simpleslackapi.events.SlackMessagePosted;
@@ -12,6 +18,7 @@ import com.ullink.slack.simpleslackapi.impl.SlackSessionFactory;
 import com.ullink.slack.simpleslackapi.listeners.SlackMessagePostedListener;
 
 import de.justeazy.slack2irc.Bot;
+import de.justeazy.slack2irc.Message;
 
 /**
  * <p>
@@ -21,6 +28,11 @@ import de.justeazy.slack2irc.Bot;
  * @author Henrik Peters
  */
 public class SlackBot implements Bot {
+
+	/**
+	 * Logging instance
+	 */
+	private static Logger l = LogManager.getLogger(SlackBot.class);
 
 	/**
 	 * Properties to configure the connection to the Slack network
@@ -41,7 +53,7 @@ public class SlackBot implements Bot {
 	/**
 	 * Last posted message
 	 */
-	private String postedMessage;
+	private Message postedMessage;
 
 	/**
 	 * <p>
@@ -58,9 +70,11 @@ public class SlackBot implements Bot {
 		slackSession.addMessagePostedListener(new SlackMessagePostedListener() {
 			public void onEvent(SlackMessagePosted event, SlackSession session) {
 				SlackUser messageSender = event.getSender();
+				l.trace("messageSender.userName = " + messageSender.getUserName());
 				if (!messageSender.getUserName().equals(getUserName())) {
-					String oldPostedMessage = postedMessage == null ? null : new String(postedMessage);
-					postedMessage = "<" + messageSender.getUserName() + "> " + event.getMessageContent();
+					l.trace("event.messageContent = " + event.getMessageContent());
+					Message oldPostedMessage = postedMessage != null ? postedMessage.clone() : null;
+					postedMessage = new Message(messageSender.getUserName(), event.getMessageContent());
 					pcs.firePropertyChange("postedMessage", oldPostedMessage, postedMessage);
 				}
 			}
@@ -72,8 +86,33 @@ public class SlackBot implements Bot {
 	 * Sends a message to the configured channel in the Slack network.
 	 * </p>
 	 */
-	public void sendMessage(String message) {
-		slackSession.sendMessage(slackSession.findChannelByName(properties.getProperty("slackChannel")), message);
+	public void sendMessage(Message message) {
+		String sendMessage = "";
+		if (message.getUsername() != null) {
+			sendMessage += "<" + message.getUsername() + "> ";
+		}
+		sendMessage += message.getContent();
+		l.trace("sendMessage = " + sendMessage);
+		slackSession.sendMessage(slackSession.findChannelByName(properties.getProperty("slackChannel")), sendMessage);
+	}
+
+	/**
+	 * <p>
+	 * Returns a sorted array of the usernames in the Slack channel.
+	 * </p>
+	 */
+	public String[] getChannelUsers() {
+		SlackChannel slackChannel = slackSession.findChannelByName(properties.getProperty("slackChannel"));
+		Collection<SlackUser> members = slackChannel.getMembers();
+		String[] usernames = new String[members.size() - 1];
+		int i = 0;
+		for (SlackUser member : members) {
+			if (!member.getUserName().equals(getUserName())) {
+				usernames[i++] = member.getUserName();
+			}
+		}
+		Arrays.sort(usernames);
+		return usernames;
 	}
 
 	/**
@@ -103,7 +142,7 @@ public class SlackBot implements Bot {
 	 * Returns the last posted message.
 	 * </p>
 	 */
-	public String getPostedMessage() {
+	public Message getPostedMessage() {
 		return this.postedMessage;
 	}
 
