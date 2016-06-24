@@ -40,4 +40,13 @@ public interface Bot extends Runnable {
 	 */
 	public Message getPostedMessage();
 
+	/**
+	 * <p>
+	 * Returns a sorted array of channel usernames.
+	 * </p>
+	 * 
+	 * @return Sorted Array of usernames
+	 */
+	public String[] getChannelUsers();
+
 }

@@ -3,11 +3,14 @@ package de.justeazy.slack2irc.slack;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Properties;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.ullink.slack.simpleslackapi.SlackChannel;
 import com.ullink.slack.simpleslackapi.SlackSession;
 import com.ullink.slack.simpleslackapi.SlackUser;
 import com.ullink.slack.simpleslackapi.events.SlackMessagePosted;
@@ -84,8 +87,32 @@ public class SlackBot implements Bot {
 	 * </p>
 	 */
 	public void sendMessage(Message message) {
-		slackSession.sendMessage(slackSession.findChannelByName(properties.getProperty("slackChannel")),
-				"<" + message.getUsername() + "> " + message.getContent());
+		String sendMessage = "";
+		if (message.getUsername() != null) {
+			sendMessage += "<" + message.getUsername() + "> ";
+		}
+		sendMessage += message.getContent();
+		l.trace("sendMessage = " + sendMessage);
+		slackSession.sendMessage(slackSession.findChannelByName(properties.getProperty("slackChannel")), sendMessage);
+	}
+
+	/**
+	 * <p>
+	 * Returns a sorted array of the usernames in the Slack channel.
+	 * </p>
+	 */
+	public String[] getChannelUsers() {
+		SlackChannel slackChannel = slackSession.findChannelByName(properties.getProperty("slackChannel"));
+		Collection<SlackUser> members = slackChannel.getMembers();
+		String[] usernames = new String[members.size() - 1];
+		int i = 0;
+		for (SlackUser member : members) {
+			if (!member.getUserName().equals(getUserName())) {
+				usernames[i++] = member.getUserName();
+			}
+		}
+		Arrays.sort(usernames);
+		return usernames;
 	}
 
 	/**

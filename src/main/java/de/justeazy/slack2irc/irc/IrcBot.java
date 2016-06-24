@@ -3,11 +3,15 @@ package de.justeazy.slack2irc.irc;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Properties;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jibble.pircbot.IrcException;
 import org.jibble.pircbot.NickAlreadyInUseException;
 import org.jibble.pircbot.PircBot;
+import org.jibble.pircbot.User;
 
 import de.justeazy.slack2irc.Bot;
 import de.justeazy.slack2irc.Message;
@@ -20,6 +24,11 @@ import de.justeazy.slack2irc.Message;
  * @author Henrik Peters
  */
 public class IrcBot extends PircBot implements Bot {
+
+	/**
+	 * Logging instance
+	 */
+	private static Logger l = LogManager.getLogger(IrcBot.class);
 
 	/**
 	 * Properties to configure the connection to the IRC network
@@ -79,8 +88,31 @@ public class IrcBot extends PircBot implements Bot {
 	 * </p>
 	 */
 	public void sendMessage(Message message) {
-		this.sendMessage(properties.getProperty("ircChannel"),
-				"<" + message.getUsername() + "> " + message.getContent());
+		String sendMessage = "";
+		if (message.getUsername() != null) {
+			sendMessage += "<" + message.getUsername() + "> ";
+		}
+		sendMessage += message.getContent();
+		l.trace("sendMessage = " + sendMessage);
+		this.sendMessage(properties.getProperty("ircChannel"), sendMessage);
+	}
+
+	/**
+	 * <p>
+	 * Returns a sorted array of channel usernames.
+	 * </p>
+	 */
+	public String[] getChannelUsers() {
+		User[] users = this.getUsers(properties.getProperty("ircChannel"));
+		String[] usernames = new String[users.length - 1];
+		int i = 0;
+		for (User user : users) {
+			if (!user.getNick().equals(this.getNick())) {
+				usernames[i++] = user.getNick();
+			}
+		}
+		Arrays.sort(usernames);
+		return usernames;
 	}
 
 	/**
