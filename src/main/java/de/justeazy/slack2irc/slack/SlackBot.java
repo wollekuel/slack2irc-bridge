@@ -4,15 +4,19 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
 import com.ullink.slack.simpleslackapi.SlackChannel;
+import com.ullink.slack.simpleslackapi.SlackMessageHandle;
 import com.ullink.slack.simpleslackapi.SlackSession;
 import com.ullink.slack.simpleslackapi.SlackUser;
 import com.ullink.slack.simpleslackapi.events.SlackConnected;
@@ -26,6 +30,7 @@ import com.ullink.slack.simpleslackapi.listeners.SlackDisconnectedListener;
 import com.ullink.slack.simpleslackapi.listeners.SlackGroupJoinedListener;
 import com.ullink.slack.simpleslackapi.listeners.SlackMessagePostedListener;
 import com.ullink.slack.simpleslackapi.listeners.SlackUserChangeListener;
+import com.ullink.slack.simpleslackapi.replies.GenericSlackReply;
 
 import de.justeazy.slack2irc.Bot;
 import de.justeazy.slack2irc.Message;
@@ -91,8 +96,9 @@ public class SlackBot implements Bot {
 				if (!messageSender.getUserName().equals(getUserName())) {
 					l.trace("event.messageContent = " + event.getMessageContent());
 
-					// parse message in order to fire changing joinPartQuitMessage property or postedMessage property
-					Pattern p = Pattern.compile("\\x3C\\x40\\w+\\x7C(.*)\\x3E\\shas\\s(\\w+)\\sthe\\sgroup");
+					// parse message in order to fire changing
+					// joinPartQuitMessage property or postedMessage property
+					Pattern p = Pattern.compile("\\x3C\\x40\\w+\\x7C(.*)\\x3E\\shas\\s(\\w+)\\sthe\\s(\\w+)");
 					Matcher m = p.matcher(event.getMessageContent());
 					if (m.find()) {
 						l.trace("Firing property \"joinPartQuitMessage\"");
@@ -160,17 +166,53 @@ public class SlackBot implements Bot {
 	 * </p>
 	 */
 	public String[] getChannelUsers() {
-		SlackChannel slackChannel = slackSession.findChannelByName(properties.getProperty("slackChannel"));
-		Collection<SlackUser> members = slackChannel.getMembers();
-		String[] usernames = new String[members.size() - 1];
-		int i = 0;
-		for (SlackUser member : members) {
-			if (!member.getUserName().equals(getUserName())) {
-				usernames[i++] = member.getUserName();
-			}
+		SlackChannel channel = slackSession.findChannelByName(properties.getProperty("slackChannel"));
+		l.trace("channel.type = " + channel.getType());
+
+		Map<String, String> params = new HashMap<String, String>();
+		params.put("channel", channel.getId());
+
+		String command, jsonObject;
+		switch (channel.getType()) {
+		case PRIVATE_GROUP:
+			command = "groups.info";
+			jsonObject = "group";
+			break;
+		default:
+			command = "channels.info";
+			jsonObject = "channel";
+			break;
 		}
-		Arrays.sort(usernames);
-		return usernames;
+		l.trace("command = " + command);
+		l.trace("jsonObject = " + jsonObject);
+
+		SlackMessageHandle<GenericSlackReply> handle = slackSession.postGenericSlackCommand(params, command);
+		l.trace("handle = " + handle);
+
+		GenericSlackReply reply = handle.getReply();
+		l.trace("reply = " + reply);
+
+		JSONObject answer = reply.getPlainAnswer();
+		l.trace("answer = " + answer);
+
+		JSONArray jsonMembers = (JSONArray) ((JSONObject) answer.get(jsonObject)).get("members");
+		l.trace("jsonMembers = " + jsonMembers);
+
+		if (jsonMembers != null) {
+			String[] usernames = new String[jsonMembers.size() - 1];
+			int i = 0;
+			for (Object member : jsonMembers) {
+				l.trace("member = " + member);
+
+				SlackUser user = slackSession.findUserById((String) member);
+				if (!user.getUserName().equals(getUserName())) {
+					usernames[i++] = user.getUserName();
+				}
+			}
+			Arrays.sort(usernames);
+			return usernames;
+		}
+		return null;
 	}
 
 	/**
