@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,9 +15,17 @@ import org.apache.logging.log4j.Logger;
 import com.ullink.slack.simpleslackapi.SlackChannel;
 import com.ullink.slack.simpleslackapi.SlackSession;
 import com.ullink.slack.simpleslackapi.SlackUser;
+import com.ullink.slack.simpleslackapi.events.SlackConnected;
+import com.ullink.slack.simpleslackapi.events.SlackDisconnected;
+import com.ullink.slack.simpleslackapi.events.SlackGroupJoined;
 import com.ullink.slack.simpleslackapi.events.SlackMessagePosted;
+import com.ullink.slack.simpleslackapi.events.SlackUserChange;
 import com.ullink.slack.simpleslackapi.impl.SlackSessionFactory;
+import com.ullink.slack.simpleslackapi.listeners.SlackConnectedListener;
+import com.ullink.slack.simpleslackapi.listeners.SlackDisconnectedListener;
+import com.ullink.slack.simpleslackapi.listeners.SlackGroupJoinedListener;
 import com.ullink.slack.simpleslackapi.listeners.SlackMessagePostedListener;
+import com.ullink.slack.simpleslackapi.listeners.SlackUserChangeListener;
 
 import de.justeazy.slack2irc.Bot;
 import de.justeazy.slack2irc.Message;
@@ -53,7 +63,12 @@ public class SlackBot implements Bot {
 	/**
 	 * Last posted message
 	 */
-	private Message postedMessage;
+	private Message postedMessage = null;
+
+	/**
+	 * Last notification about Joins, Parts or Quits
+	 */
+	private Message joinPartQuitMessage = null;
 
 	/**
 	 * <p>
@@ -67,16 +82,59 @@ public class SlackBot implements Bot {
 		setProperties(properties);
 
 		slackSession = SlackSessionFactory.createWebSocketSlackSession(properties.getProperty("slackAuthToken"));
+
+		// add listener to get new posted messages
 		slackSession.addMessagePostedListener(new SlackMessagePostedListener() {
 			public void onEvent(SlackMessagePosted event, SlackSession session) {
 				SlackUser messageSender = event.getSender();
 				l.trace("messageSender.userName = " + messageSender.getUserName());
 				if (!messageSender.getUserName().equals(getUserName())) {
 					l.trace("event.messageContent = " + event.getMessageContent());
-					Message oldPostedMessage = postedMessage != null ? postedMessage.clone() : null;
-					postedMessage = new Message(messageSender.getUserName(), event.getMessageContent());
-					pcs.firePropertyChange("postedMessage", oldPostedMessage, postedMessage);
+
+					// parse message in order to fire changing joinPartQuitMessage property or postedMessage property
+					Pattern p = Pattern.compile("\\x3C\\x40\\w+\\x7C(.*)\\x3E\\shas\\s(\\w+)\\sthe\\sgroup");
+					Matcher m = p.matcher(event.getMessageContent());
+					if (m.find()) {
+						l.trace("Firing property \"joinPartQuitMessage\"");
+						Message oldJoinPartQuitMessage = joinPartQuitMessage != null ? joinPartQuitMessage.clone()
+								: null;
+						joinPartQuitMessage = new Message(null, m.group(1) + " has " + m.group(2) + " Slack.");
+						pcs.firePropertyChange("joinPartQuitMessage", oldJoinPartQuitMessage, joinPartQuitMessage);
+					} else {
+						l.trace("Firing property \"postedMessage\"");
+						Message oldPostedMessage = postedMessage != null ? postedMessage.clone() : null;
+						postedMessage = new Message(messageSender.getUserName(), event.getMessageContent());
+						pcs.firePropertyChange("postedMessage", oldPostedMessage, postedMessage);
+					}
 				}
+			}
+		});
+
+		// add listener for debugging purposes
+		slackSession.addGroupJoinedListener(new SlackGroupJoinedListener() {
+			public void onEvent(SlackGroupJoined event, SlackSession session) {
+				l.debug("event = " + event);
+			}
+		});
+
+		// add listener for debugging purposes
+		slackSession.addSlackUserChangeListener(new SlackUserChangeListener() {
+			public void onEvent(SlackUserChange event, SlackSession session) {
+				l.debug("event = " + event);
+			}
+		});
+
+		// add listener for debugging purposes
+		slackSession.addSlackConnectedListener(new SlackConnectedListener() {
+			public void onEvent(SlackConnected event, SlackSession session) {
+				l.debug("event = " + event);
+			}
+		});
+
+		// add listener for debugging purposes
+		slackSession.addSlackDisconnectedListener(new SlackDisconnectedListener() {
+			public void onEvent(SlackDisconnected event, SlackSession session) {
+				l.debug("event = " + event);
 			}
 		});
 	}
