@@ -47,6 +47,11 @@ public class IrcBot extends PircBot implements Bot {
 	private Message postedMessage = null;
 
 	/**
+	 * Last notification about Joins, Parts or Quits
+	 */
+	private Message joinPartQuitMessage = null;
+
+	/**
 	 * <p>
 	 * Creates an instance of <code>IrcBot</code> with the given properties.
 	 * </P>
@@ -75,11 +80,66 @@ public class IrcBot extends PircBot implements Bot {
 
 	/**
 	 * <p>
+	 * Overrides <code>onJoin</code> of PircBot to handle Joins in the IRC
+	 * network. Notifications are fired for the property "joinPartQuitMessage".
+	 * </p>
+	 */
+	public void onJoin(String channel, String sender, String login, String hostname) {
+		if (!sender.equals(this.getNick())) {
+			Message oldJoinPartQuitMessage = joinPartQuitMessage != null ? joinPartQuitMessage.clone() : null;
+			joinPartQuitMessage = new Message(null, sender + " has joined IRC.");
+			pcs.firePropertyChange("joinPartQuitMessage", oldJoinPartQuitMessage, joinPartQuitMessage);
+		}
+	}
+
+	/**
+	 * <p>
+	 * Overrides <code>onPart</code> of PircBot to handle Parts in the IRC
+	 * network. Notifications are fired for the property "joinPartQuitMessage".
+	 * </p>
+	 */
+	public void onPart(String channel, String sender, String login, String hostname) {
+		if (!sender.equals(this.getNick())) {
+			Message oldJoinPartQuitMessage = joinPartQuitMessage != null ? joinPartQuitMessage.clone() : null;
+			joinPartQuitMessage = new Message(null, sender + " has parted IRC.");
+			pcs.firePropertyChange("joinPartQuitMessage", oldJoinPartQuitMessage, joinPartQuitMessage);
+		}
+	}
+
+	/**
+	 * <p>
+	 * Overrides <code>onQuit</code> of PircBot to handle Quits in the IRC
+	 * network. Notifications are fired for the property "joinPartQuitMessage".
+	 * </p>
+	 */
+	public void onQuit(String channel, String sender, String login, String hostname) {
+		if (!sender.equals(this.getNick())) {
+			l.trace("channel = " + channel);
+			l.trace("sender = " + sender);
+			l.trace("login = " + login);
+			l.trace("hostname = " + hostname);
+			Message oldJoinPartQuitMessage = joinPartQuitMessage != null ? joinPartQuitMessage.clone() : null;
+			joinPartQuitMessage = new Message(null, channel + " has quit IRC.");
+			pcs.firePropertyChange("joinPartQuitMessage", oldJoinPartQuitMessage, joinPartQuitMessage);
+		}
+	}
+
+	/**
+	 * <p>
 	 * Returns the last posted message.
 	 * </p>
 	 */
 	public Message getPostedMessage() {
 		return this.postedMessage;
+	}
+
+	/**
+	 * <p>
+	 * Returns the last notification about Joins, Parts and Quits.
+	 * </p>
+	 */
+	public Message getJoinPartQuitMessage() {
+		return this.joinPartQuitMessage;
 	}
 
 	/**

@@ -171,6 +171,12 @@ public class Slack2IrcBridge implements PropertyChangeListener {
 			} else if (evt.getSource().equals(slackBot)) {
 				ircBot.sendMessage((Message) evt.getNewValue());
 			}
+		} else if (evt.getPropertyName().equals("joinPartQuitMessage")) {
+			if (evt.getSource().equals(ircBot)) {
+				slackBot.sendMessage((Message) evt.getNewValue());
+			} else if (evt.getSource().equals(slackBot)) {
+				ircBot.sendMessage((Message) evt.getNewValue());
+			}
 		}
 	}
 
