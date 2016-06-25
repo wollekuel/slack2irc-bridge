@@ -118,10 +118,25 @@ public class Slack2IrcBridge implements PropertyChangeListener {
 	 */
 	private void processCommandEvent(PropertyChangeEvent evt) {
 		Message message = (Message) evt.getNewValue();
-		if (message.getContent().startsWith("?listusers")) {
-			l.trace("Processing /listusers command event");
+		if (message.getContent().startsWith("?listemojis")) {
+			l.debug("Processing ?listemojis command event");
+			processListemojisCommandEvent(evt);
+		} else if (message.getContent().startsWith("?listusers")) {
+			l.trace("Processing ?listusers command event");
 			processListusersCommandEvent(evt);
 		}
+	}
+
+	/**
+	 * <p>
+	 * List session emojis to logging instance.
+	 * </p>
+	 * 
+	 * @param evt
+	 *            Event
+	 */
+	private void processListemojisCommandEvent(PropertyChangeEvent evt) {
+		((SlackBot) slackBot).getEmojisList();
 	}
 
 	/**
