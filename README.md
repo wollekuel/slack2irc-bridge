@@ -1,4 +1,4 @@
-# Slack2IRC Bridge
+# Slack2IRC Bridge ![Build Status](http://wollekuel.spdns.de:8080/buildStatus/icon?job=slack2irc-bridge)
 
 Slack2IRC Bridge uses the [Simple Slack API](https://github.com/Ullink/simple-slack-api) to get a connection to Slack. It also uses [PircBot](http://www.jibble.org/pircbot.php) to get a connection to any given IRC server. The main task of Slack2IRC Bridge is to forward every message of Slack to IRC and vice versa.
 
