@@ -30,3 +30,7 @@ ircChannel=#somechannel
 * `ircPort`: Port of the IRC server to connect to
 * `ircPassword`: Specify a password if you need to (e.g., for connecting to a BNC)
 * `ircChannel`: Name of the IRC channel the bridge will join and forward Slack messages to (note that there has to be a `#` sign in this case)
+
+## Emojis
+
+Emojis in Slack are enclosed by colons. If you want to replace the text-based emojis in IRC, use the file `src/resources/slackemojis.config`. If you don't want to replace emojis, leave the file empty.
