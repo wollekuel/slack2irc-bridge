@@ -2,6 +2,8 @@ package de.justeazy.slack2irc.irc;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
@@ -36,6 +38,11 @@ public class IrcBot extends PircBot implements Bot {
 	private Properties properties;
 
 	/**
+	 * Properties to replace Slack emojis in IRC
+	 */
+	private Properties emojis;
+
+	/**
 	 * Support for property changes (listen for property "postedMessage" to get
 	 * information about new messages in that network)
 	 */
@@ -58,9 +65,15 @@ public class IrcBot extends PircBot implements Bot {
 	 * 
 	 * @param properties
 	 *            Properties to configure the connection
+	 * @throws IOException
+	 * @throws FileNotFoundException
 	 */
-	public IrcBot(Properties properties) {
+	public IrcBot(Properties properties) throws FileNotFoundException, IOException {
 		setProperties(properties);
+
+		// initialize emojis checker
+		emojis = new Properties();
+		emojis.load(new FileReader("src/main/resources/slackemojis.config"));
 
 		this.setName(properties.getProperty("ircNick"));
 		this.setVerbose(Boolean.parseBoolean(properties.getProperty("ircVerbose")));
@@ -153,8 +166,30 @@ public class IrcBot extends PircBot implements Bot {
 			sendMessage += "<" + message.getUsername() + "> ";
 		}
 		sendMessage += message.getContent();
+
+		// check for emojis to replace
+		sendMessage = checkEmojis(sendMessage);
+
 		l.trace("sendMessage = " + sendMessage);
 		this.sendMessage(properties.getProperty("ircChannel"), sendMessage);
+	}
+
+	/**
+	 * <p>
+	 * Replaces all emojis from <code>emojis</code> with their defined
+	 * replacements.
+	 * </p>
+	 * 
+	 * @param message
+	 *            Message to look for emojis
+	 * @return Message with replaced emojis
+	 */
+	private String checkEmojis(String message) {
+		for (Object key : emojis.keySet()) {
+			message = message.replaceAll("\\x3A" + ((String) key) + "\\x3A", emojis.getProperty((String) key));
+		}
+
+		return message;
 	}
 
 	/**

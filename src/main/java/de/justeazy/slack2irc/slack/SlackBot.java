@@ -30,6 +30,7 @@ import com.ullink.slack.simpleslackapi.listeners.SlackDisconnectedListener;
 import com.ullink.slack.simpleslackapi.listeners.SlackGroupJoinedListener;
 import com.ullink.slack.simpleslackapi.listeners.SlackMessagePostedListener;
 import com.ullink.slack.simpleslackapi.listeners.SlackUserChangeListener;
+import com.ullink.slack.simpleslackapi.replies.EmojiSlackReply;
 import com.ullink.slack.simpleslackapi.replies.GenericSlackReply;
 
 import de.justeazy.slack2irc.Bot;
@@ -213,6 +214,15 @@ public class SlackBot implements Bot {
 			return usernames;
 		}
 		return null;
+	}
+
+	public void getEmojisList() {
+		SlackMessageHandle<EmojiSlackReply> handle = slackSession.listEmoji();
+		Map<String, String> emojis = handle.getReply().getEmojis();
+		for (String emojiName : emojis.keySet()) {
+			l.trace("emojiName = " + emojiName);
+			l.trace("emojis.get(emojiName) = " + emojis.get(emojiName));
+		}
 	}
 
 	/**
