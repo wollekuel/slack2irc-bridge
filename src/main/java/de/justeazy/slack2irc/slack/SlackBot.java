@@ -4,6 +4,7 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -165,55 +166,20 @@ public class SlackBot implements Bot {
 	 * <p>
 	 * Returns a sorted array of the usernames in the Slack channel.
 	 * </p>
+	 * 
+	 * @return Array of usernames
 	 */
 	public String[] getChannelUsers() {
 		SlackChannel channel = slackSession.findChannelByName(properties.getProperty("slackChannel"));
-		l.trace("channel.type = " + channel.getType());
-
-		Map<String, String> params = new HashMap<String, String>();
-		params.put("channel", channel.getId());
-
-		String command, jsonObject;
-		switch (channel.getType()) {
-		case PRIVATE_GROUP:
-			command = "groups.info";
-			jsonObject = "group";
-			break;
-		default:
-			command = "channels.info";
-			jsonObject = "channel";
-			break;
+		slackSession.refetchUsers();
+		Collection<SlackUser> users = channel.getMembers();
+		String[] usernames = new String[users.size()];
+		int i = 0;
+		for (SlackUser user : users) {
+			usernames[i++] = user.getUserName();
 		}
-		l.trace("command = " + command);
-		l.trace("jsonObject = " + jsonObject);
-
-		SlackMessageHandle<GenericSlackReply> handle = slackSession.postGenericSlackCommand(params, command);
-		l.trace("handle = " + handle);
-
-		GenericSlackReply reply = handle.getReply();
-		l.trace("reply = " + reply);
-
-		JSONObject answer = reply.getPlainAnswer();
-		l.trace("answer = " + answer);
-
-		JSONArray jsonMembers = (JSONArray) ((JSONObject) answer.get(jsonObject)).get("members");
-		l.trace("jsonMembers = " + jsonMembers);
-
-		if (jsonMembers != null) {
-			String[] usernames = new String[jsonMembers.size() - 1];
-			int i = 0;
-			for (Object member : jsonMembers) {
-				l.trace("member = " + member);
-
-				SlackUser user = slackSession.findUserById((String) member);
-				if (!user.getUserName().equals(getUserName())) {
-					usernames[i++] = user.getUserName();
-				}
-			}
-			Arrays.sort(usernames);
-			return usernames;
-		}
-		return null;
+		Arrays.sort(usernames);
+		return usernames;
 	}
 
 	public void getEmojisList() {
