@@ -17,7 +17,7 @@
 			OFF -->
 		<Root level="debug">
 			<AppenderRef ref="STDOUT" />
-			<AppenderRef ref="SESSIONOptimizer" />
+			<AppenderRef ref="Slack2IrcBridge" />
 		</Root>
 	</Loggers>
 </Configuration>
